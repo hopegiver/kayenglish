@@ -133,6 +133,43 @@
     .task-list-item input {
       margin-right: 8px;
     }
+
+    /* TTS Speaker Button */
+    .docsify-copy-code-button {
+      position: relative;
+    }
+
+    .tts-speaker-button {
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+      cursor: pointer;
+      padding: 6px 10px;
+      font-size: 14px;
+      background: #42b983;
+      color: white;
+      border: none;
+      border-radius: 3px;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    pre:hover .tts-speaker-button {
+      opacity: 1;
+    }
+
+    .tts-speaker-button:hover {
+      background: #33a372;
+    }
+
+    .tts-speaker-button.playing {
+      background: #ff6b6b;
+    }
+
+    .tts-speaker-button.playing:hover {
+      background: #ff5252;
+    }
   </style>
 </head>
 <body>
@@ -187,7 +224,161 @@
         position: "top",
         color: "var(--theme-color,#4CAF50)",
         height: "3px",
-      }
+      },
+
+      // TTS Plugin
+      plugins: [
+        function(hook, vm) {
+          let currentUtterance = null;
+          let voicesLoaded = false;
+
+          // 음성 목록 로드 대기
+          function loadVoices() {
+            return new Promise((resolve) => {
+              const voices = window.speechSynthesis.getVoices();
+              if (voices.length > 0) {
+                voicesLoaded = true;
+                resolve(voices);
+              } else {
+                window.speechSynthesis.onvoiceschanged = () => {
+                  voicesLoaded = true;
+                  resolve(window.speechSynthesis.getVoices());
+                };
+              }
+            });
+          }
+
+          // 초기 로드
+          loadVoices().then(voices => {
+            console.log('=== Available Voices ===');
+            voices.forEach((voice, index) => {
+              console.log(`${index}: ${voice.name} (${voice.lang}) ${voice.localService ? '[Local]' : '[Remote]'}`);
+            });
+            console.log('=======================');
+          });
+
+          // 현재 재생 중인 오디오
+          let currentAudio = null;
+
+          // TTS 함수 (온라인 API 사용)
+          function speakText(text, button) {
+            // 이미 재생 중이면 중지
+            if (currentAudio && !currentAudio.paused) {
+              currentAudio.pause();
+              currentAudio = null;
+              if (button) {
+                button.textContent = '🔊';
+                button.classList.remove('playing');
+              }
+              return;
+            }
+
+            // 영어 문장만 추출 (한글 제외)
+            const englishOnly = text
+              .split('\n')
+              .filter(line => /[a-zA-Z]/.test(line) && !/[가-힣]/.test(line))
+              .join('. ');
+
+            if (!englishOnly.trim()) {
+              alert('읽을 수 있는 영어 텍스트가 없습니다.');
+              return;
+            }
+
+            // 텍스트가 너무 길면 잘라내기 (200자 제한)
+            const textToSpeak = englishOnly.length > 200
+              ? englishOnly.substring(0, 200) + '...'
+              : englishOnly;
+
+            if (button) {
+              button.textContent = '⏸️';
+              button.classList.add('playing');
+            }
+
+            console.log('🔊 Playing TTS (Online):', textToSpeak.substring(0, 50) + '...');
+
+            // Google Translate TTS API 사용
+            const encodedText = encodeURIComponent(textToSpeak);
+            const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=en&client=tw-ob&q=${encodedText}`;
+
+            const audio = new Audio(audioUrl);
+            currentAudio = audio;
+
+            audio.onplay = function() {
+              console.log('✅ TTS started');
+            };
+
+            audio.onended = function() {
+              console.log('✅ TTS ended');
+              if (button) {
+                button.textContent = '🔊';
+                button.classList.remove('playing');
+              }
+              currentAudio = null;
+            };
+
+            audio.onerror = function(e) {
+              console.error('❌ TTS Error:', e);
+              alert('TTS를 재생할 수 없습니다. 인터넷 연결을 확인해주세요.');
+              if (button) {
+                button.textContent = '🔊';
+                button.classList.remove('playing');
+              }
+              currentAudio = null;
+            };
+
+            // 재생
+            audio.play().catch(function(error) {
+              console.error('Play error:', error);
+              if (button) {
+                button.textContent = '🔊';
+                button.classList.remove('playing');
+              }
+              currentAudio = null;
+            });
+          }
+
+          // 페이지 렌더링 후 버튼 추가
+          hook.doneEach(function() {
+            setTimeout(function() {
+              document.querySelectorAll('pre[data-lang]').forEach(function(pre) {
+                // 이미 버튼이 있으면 스킵
+                if (pre.querySelector('.tts-speaker-button')) return;
+
+                const code = pre.querySelector('code');
+                if (!code) return;
+
+                const text = code.textContent;
+
+                // 영어가 포함된 코드 블록만 처리
+                if (!/[a-zA-Z]/.test(text)) return;
+
+                const button = document.createElement('button');
+                button.className = 'tts-speaker-button';
+                button.textContent = '🔊';
+                button.title = 'Read aloud (영어만 읽기)';
+
+                button.onclick = function(e) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  speakText(text, button);
+                };
+
+                pre.style.position = 'relative';
+                pre.insertBefore(button, pre.firstChild);
+              });
+            }, 100);
+          });
+
+          // 페이지 이동 시 TTS 중지
+          hook.beforeEach(function(content) {
+            if (currentAudio && !currentAudio.paused) {
+              currentAudio.pause();
+              currentAudio = null;
+            }
+            return content;
+          });
+        }
+      ]
     }
   </script>
 
