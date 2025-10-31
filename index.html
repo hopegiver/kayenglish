@@ -41,6 +41,7 @@
 
     .sidebar-nav > ul > li > a {
       font-weight: 500;
+      font-size: 16px;
     }
 
     .markdown-section {
@@ -174,6 +175,12 @@
 </head>
 <body>
   <div id="app">Loading...</div>
+
+  <script>
+    // TTS 초기화
+    console.log('✅ TTS Ready');
+  </script>
+
   <script>
     window.$docsify = {
       name: "Kay's English Note",
@@ -229,139 +236,81 @@
       // TTS Plugin
       plugins: [
         function(hook, vm) {
-          let currentUtterance = null;
-          let voicesLoaded = false;
+          let isSpeaking = false;
 
-          // 음성 목록 로드 대기
-          function loadVoices() {
-            return new Promise((resolve) => {
-              const voices = window.speechSynthesis.getVoices();
-              if (voices.length > 0) {
-                voicesLoaded = true;
-                resolve(voices);
-              } else {
-                window.speechSynthesis.onvoiceschanged = () => {
-                  voicesLoaded = true;
-                  resolve(window.speechSynthesis.getVoices());
-                };
-              }
-            });
-          }
-
-          // 초기 로드
-          loadVoices().then(voices => {
-            console.log('=== Available Voices ===');
-            voices.forEach((voice, index) => {
-              console.log(`${index}: ${voice.name} (${voice.lang}) ${voice.localService ? '[Local]' : '[Remote]'}`);
-            });
-            console.log('=======================');
-          });
-
-          // 현재 재생 중인 오디오
-          let currentAudio = null;
-
-          // TTS 함수 (온라인 API 사용)
+          // TTS 함수
           function speakText(text, button) {
-            // 이미 재생 중이면 중지
-            if (currentAudio && !currentAudio.paused) {
-              currentAudio.pause();
-              currentAudio = null;
-              if (button) {
-                button.textContent = '🔊';
-                button.classList.remove('playing');
-              }
+            // 브라우저 지원 체크
+            if (!window.speechSynthesis) {
+              alert('이 브라우저는 TTS를 지원하지 않습니다.');
               return;
             }
 
-            // 영어 문장만 추출 (한글 제외)
-            const englishOnly = text
+            // 재생 중이면 중지
+            if (isSpeaking) {
+              window.speechSynthesis.cancel();
+              isSpeaking = false;
+              button.textContent = '🔊';
+              button.classList.remove('playing');
+              return;
+            }
+
+            // 영어 텍스트만 추출
+            const englishText = text
               .split('\n')
               .filter(line => /[a-zA-Z]/.test(line) && !/[가-힣]/.test(line))
-              .join('. ');
+              .join('. ')
+              .substring(0, 300);
 
-            if (!englishOnly.trim()) {
+            if (!englishText.trim()) {
               alert('읽을 수 있는 영어 텍스트가 없습니다.');
               return;
             }
 
-            // 텍스트가 너무 길면 잘라내기 (200자 제한)
-            const textToSpeak = englishOnly.length > 200
-              ? englishOnly.substring(0, 200) + '...'
-              : englishOnly;
-
-            if (button) {
-              button.textContent = '⏸️';
-              button.classList.add('playing');
+            // 영어 음성 찾기
+            const voices = speechSynthesis.getVoices();
+            const englishVoice = voices.find(v => v.lang.startsWith('en-'));
+            
+            if (!englishVoice) {
+              alert('영어 TTS 음성이 없습니다.\nWindows 설정 → 시간 및 언어 → 음성에서 English 추가 후 새로고침하세요.');
+              return;
             }
 
-            console.log('🔊 Playing TTS (Online):', textToSpeak.substring(0, 50) + '...');
+            // 음성 재생
+            const utterance = new SpeechSynthesisUtterance(englishText);
+            utterance.voice = englishVoice;
+            utterance.rate = 0.9;
+            utterance.lang = 'en-US';
 
-            // Google Translate TTS API 사용
-            const encodedText = encodeURIComponent(textToSpeak);
-            const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=en&client=tw-ob&q=${encodedText}`;
-
-            const audio = new Audio(audioUrl);
-            currentAudio = audio;
-
-            audio.onplay = function() {
-              console.log('✅ TTS started');
+            utterance.onstart = () => {
+              isSpeaking = true;
+              button.textContent = '⏸️';
+              button.classList.add('playing');
             };
 
-            audio.onended = function() {
-              console.log('✅ TTS ended');
-              if (button) {
-                button.textContent = '🔊';
-                button.classList.remove('playing');
-              }
-              currentAudio = null;
+            utterance.onend = utterance.onerror = () => {
+              isSpeaking = false;
+              button.textContent = '🔊';
+              button.classList.remove('playing');
             };
 
-            audio.onerror = function(e) {
-              console.error('❌ TTS Error:', e);
-              alert('TTS를 재생할 수 없습니다. 인터넷 연결을 확인해주세요.');
-              if (button) {
-                button.textContent = '🔊';
-                button.classList.remove('playing');
-              }
-              currentAudio = null;
-            };
-
-            // 재생
-            audio.play().catch(function(error) {
-              console.error('Play error:', error);
-              if (button) {
-                button.textContent = '🔊';
-                button.classList.remove('playing');
-              }
-              currentAudio = null;
-            });
+            speechSynthesis.speak(utterance);
           }
 
-          // 페이지 렌더링 후 버튼 추가
-          hook.doneEach(function() {
-            setTimeout(function() {
-              document.querySelectorAll('pre[data-lang]').forEach(function(pre) {
-                // 이미 버튼이 있으면 스킵
+          // 버튼 추가
+          hook.doneEach(() => {
+            setTimeout(() => {
+              document.querySelectorAll('pre[data-lang]').forEach(pre => {
                 if (pre.querySelector('.tts-speaker-button')) return;
-
+                
                 const code = pre.querySelector('code');
-                if (!code) return;
-
-                const text = code.textContent;
-
-                // 영어가 포함된 코드 블록만 처리
-                if (!/[a-zA-Z]/.test(text)) return;
+                if (!code || !/[a-zA-Z]/.test(code.textContent)) return;
 
                 const button = document.createElement('button');
                 button.className = 'tts-speaker-button';
                 button.textContent = '🔊';
-                button.title = 'Read aloud (영어만 읽기)';
-
-                button.onclick = function(e) {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  speakText(text, button);
-                };
+                button.title = '영어 읽기';
+                button.onclick = () => speakText(code.textContent, button);
 
                 pre.style.position = 'relative';
                 pre.insertBefore(button, pre.firstChild);
@@ -369,11 +318,11 @@
             }, 100);
           });
 
-          // 페이지 이동 시 TTS 중지
-          hook.beforeEach(function(content) {
-            if (currentAudio && !currentAudio.paused) {
-              currentAudio.pause();
-              currentAudio = null;
+          // 페이지 이동시 TTS 중지
+          hook.beforeEach(content => {
+            if (isSpeaking) {
+              speechSynthesis.cancel();
+              isSpeaking = false;
             }
             return content;
           });
