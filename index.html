@@ -135,41 +135,177 @@
       margin-right: 8px;
     }
 
-    /* TTS Speaker Button */
+    /* TTS Speaker Button - 모바일 최적화 */
     .docsify-copy-code-button {
       position: relative;
     }
 
     .tts-speaker-button {
       position: absolute;
-      top: 0;
-      left: 0;
+      top: 8px;
+      left: 8px;
       z-index: 1;
       cursor: pointer;
-      padding: 6px 10px;
-      font-size: 14px;
+      padding: 8px 12px;
+      font-size: 16px;
       background: #42b983;
       color: white;
       border: none;
-      border-radius: 3px;
-      opacity: 0;
-      transition: opacity 0.3s;
+      border-radius: 6px;
+      opacity: 0.8;
+      transition: all 0.3s ease;
+      min-width: 44px;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     }
 
-    pre:hover .tts-speaker-button {
-      opacity: 1;
+    /* 데스크톱: 호버시 표시 */
+    @media (hover: hover) and (pointer: fine) {
+      .tts-speaker-button {
+        opacity: 0;
+      }
+      
+      pre:hover .tts-speaker-button {
+        opacity: 0.8;
+      }
+      
+      .tts-speaker-button:hover {
+        background: #33a372;
+        opacity: 1;
+        transform: scale(1.05);
+      }
     }
 
-    .tts-speaker-button:hover {
+    /* 모바일: 항상 표시 */
+    @media (hover: none) or (pointer: coarse) {
+      .tts-speaker-button {
+        opacity: 0.7;
+        top: 4px;
+        left: 4px;
+        padding: 10px;
+        font-size: 18px;
+      }
+    }
+
+    .tts-speaker-button:active {
+      transform: scale(0.95);
       background: #33a372;
     }
 
     .tts-speaker-button.playing {
       background: #ff6b6b;
+      animation: pulse 1.5s infinite;
     }
 
-    .tts-speaker-button.playing:hover {
+    .tts-speaker-button.playing:hover,
+    .tts-speaker-button.playing:active {
       background: #ff5252;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.7; }
+      50% { opacity: 1; }
+      100% { opacity: 0.7; }
+    }
+
+    /* 모바일 전용 스타일 */
+    @media screen and (max-width: 768px) {
+      .markdown-section {
+        padding: 20px 15px;
+      }
+      
+      .markdown-section pre {
+        position: relative;
+        overflow-x: auto;
+      }
+      
+      .tts-speaker-button {
+        position: sticky;
+        left: 4px;
+        top: 4px;
+      }
+
+      /* 모바일 햄버거 메뉴 버튼 스타일링 */
+      .app-nav .sidebar-toggle {
+        background: var(--theme-color, #4CAF50) !important;
+        color: white !important;
+        border-radius: 50% !important;
+        width: 48px !important;
+        height: 48px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3) !important;
+        border: none !important;
+        margin: 12px !important;
+        transition: all 0.3s ease !important;
+        font-size: 20px !important;
+        line-height: 1 !important;
+      }
+
+      .app-nav .sidebar-toggle:hover,
+      .app-nav .sidebar-toggle:active {
+        background: #45a049 !important;
+        transform: scale(1.05) !important;
+        box-shadow: 0 6px 16px rgba(76, 175, 80, 0.4) !important;
+      }
+
+      /* Docsify 기본 햄버거 메뉴 버튼 스타일 오버라이드 */
+      .sidebar-toggle {
+        background: var(--theme-color, #4CAF50) !important;
+        color: white !important;
+        border-radius: 12px !important;
+        width: 56px !important;
+        height: 56px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3) !important;
+        border: none !important;
+        padding: 8px !important;
+        transition: all 0.3s ease !important;
+        font-size: 20px !important;
+        position: fixed !important;
+        bottom: 20px !important;
+        left: 20px !important;
+        top: auto !important;
+        z-index: 1000 !important;
+      }
+
+      .sidebar-toggle:hover,
+      .sidebar-toggle:active {
+        background: #45a049 !important;
+        transform: scale(1.05) !important;
+        box-shadow: 0 6px 16px rgba(76, 175, 80, 0.4) !important;
+      }
+
+      /* 햄버거 메뉴 아이콘 스타일 */
+      .sidebar-toggle span {
+        display: block !important;
+        width: 24px !important;
+        height: 3px !important;
+        background: white !important;
+        margin: 4px 0 !important;
+        transition: 0.3s !important;
+        border-radius: 2px !important;
+      }
+
+      /* 메뉴가 열렸을 때 X 모양으로 변경 */
+      .sidebar-toggle.active span:nth-child(1) {
+        transform: rotate(-45deg) translate(-5px, 6px) !important;
+      }
+
+      .sidebar-toggle.active span:nth-child(2) {
+        opacity: 0 !important;
+      }
+
+      .sidebar-toggle.active span:nth-child(3) {
+        transform: rotate(45deg) translate(-5px, -6px) !important;
+      }
     }
   </style>
 </head>
@@ -233,71 +369,152 @@
         height: "3px",
       },
 
-      // TTS Plugin
+      // TTS Plugin - 모바일 최적화
       plugins: [
         function(hook, vm) {
           let isSpeaking = false;
+          let currentButton = null;
 
-          // TTS 함수
+          // 모바일 디바이스 감지
+          const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                          ('ontouchstart' in window) || 
+                          (window.innerWidth <= 768);
+
+          // TTS 함수 - 모바일 최적화
           function speakText(text, button) {
-            // 브라우저 지원 체크
-            if (!window.speechSynthesis) {
-              alert('이 브라우저는 TTS를 지원하지 않습니다.');
-              return;
+            try {
+              // 브라우저 지원 체크
+              if (!window.speechSynthesis) {
+                showMobileAlert('이 브라우저는 음성 재생을 지원하지 않습니다.');
+                return;
+              }
+
+              // 재생 중이면 중지
+              if (isSpeaking) {
+                window.speechSynthesis.cancel();
+                resetButton();
+                return;
+              }
+
+              // 영어 텍스트만 추출
+              const englishText = text
+                .split('\n')
+                .filter(line => /[a-zA-Z]/.test(line) && !/[가-힣]/.test(line))
+                .join('. ')
+                .substring(0, isMobile ? 200 : 300); // 모바일은 더 짧게
+
+              if (!englishText.trim()) {
+                showMobileAlert('읽을 수 있는 영어 텍스트가 없습니다.');
+                return;
+              }
+
+              // 음성 로딩 대기 (모바일에서 필요)
+              const voices = speechSynthesis.getVoices();
+              if (voices.length === 0) {
+                // 음성 목록 로딩 대기
+                speechSynthesis.onvoiceschanged = () => {
+                  if (!isSpeaking) speakWithVoice(englishText, button);
+                };
+                return;
+              }
+
+              speakWithVoice(englishText, button);
+
+            } catch (error) {
+              console.error('TTS Error:', error);
+              showMobileAlert('음성 재생 중 오류가 발생했습니다.');
+              resetButton();
             }
+          }
 
-            // 재생 중이면 중지
-            if (isSpeaking) {
-              window.speechSynthesis.cancel();
-              isSpeaking = false;
-              button.textContent = '🔊';
-              button.classList.remove('playing');
-              return;
-            }
-
-            // 영어 텍스트만 추출
-            const englishText = text
-              .split('\n')
-              .filter(line => /[a-zA-Z]/.test(line) && !/[가-힣]/.test(line))
-              .join('. ')
-              .substring(0, 300);
-
-            if (!englishText.trim()) {
-              alert('읽을 수 있는 영어 텍스트가 없습니다.');
-              return;
-            }
-
-            // 영어 음성 찾기
+          // 실제 음성 재생 함수
+          function speakWithVoice(text, button) {
             const voices = speechSynthesis.getVoices();
-            const englishVoice = voices.find(v => v.lang.startsWith('en-'));
+            let englishVoice = voices.find(v => v.lang.startsWith('en-') && v.localService);
             
             if (!englishVoice) {
-              alert('영어 TTS 음성이 없습니다.\nWindows 설정 → 시간 및 언어 → 음성에서 English 추가 후 새로고침하세요.');
+              englishVoice = voices.find(v => v.lang.startsWith('en-'));
+            }
+            
+            if (!englishVoice) {
+              const message = isMobile 
+                ? '영어 음성이 없습니다.\n기기 설정에서 영어 TTS를 활성화해주세요.'
+                : '영어 TTS 음성이 없습니다.\nWindows 설정 → 시간 및 언어 → 음성에서 English 추가 후 새로고침하세요.';
+              showMobileAlert(message);
               return;
             }
 
             // 음성 재생
-            const utterance = new SpeechSynthesisUtterance(englishText);
+            const utterance = new SpeechSynthesisUtterance(text);
             utterance.voice = englishVoice;
-            utterance.rate = 0.9;
+            utterance.rate = isMobile ? 0.8 : 0.9; // 모바일에서 약간 느리게
+            utterance.pitch = 1;
+            utterance.volume = 1;
             utterance.lang = 'en-US';
 
             utterance.onstart = () => {
               isSpeaking = true;
+              currentButton = button;
               button.textContent = '⏸️';
               button.classList.add('playing');
+              button.setAttribute('aria-label', '음성 재생 중 - 탭하여 중지');
             };
 
             utterance.onend = utterance.onerror = () => {
-              isSpeaking = false;
-              button.textContent = '🔊';
-              button.classList.remove('playing');
+              resetButton();
             };
 
             speechSynthesis.speak(utterance);
           }
 
-          // 버튼 추가
+          // 버튼 상태 리셋
+          function resetButton() {
+            isSpeaking = false;
+            if (currentButton) {
+              currentButton.textContent = '🔊';
+              currentButton.classList.remove('playing');
+              currentButton.setAttribute('aria-label', '영어 텍스트 읽기');
+              currentButton = null;
+            }
+          }
+
+          // 모바일 친화적 알림
+          function showMobileAlert(message) {
+            if (isMobile && window.confirm) {
+              confirm(message); // 모바일에서 더 나은 UX
+            } else {
+              alert(message);
+            }
+          }
+
+          // 터치 이벤트 핸들러
+          function createTouchHandler(text, button) {
+            let touchStartTime;
+            
+            return {
+              touchstart: (e) => {
+                touchStartTime = Date.now();
+                button.style.transform = 'scale(0.95)';
+              },
+              touchend: (e) => {
+                e.preventDefault();
+                button.style.transform = '';
+                
+                // 짧은 터치만 허용 (길게 누르기 방지)
+                if (Date.now() - touchStartTime < 500) {
+                  speakText(text, button);
+                }
+              },
+              click: (e) => {
+                e.preventDefault();
+                if (!isMobile) { // 데스크톱에서만 클릭 이벤트 사용
+                  speakText(text, button);
+                }
+              }
+            };
+          }
+
+          // 버튼 추가 - 모바일 최적화
           hook.doneEach(() => {
             setTimeout(() => {
               document.querySelectorAll('pre[data-lang]').forEach(pre => {
@@ -309,11 +526,21 @@
                 const button = document.createElement('button');
                 button.className = 'tts-speaker-button';
                 button.textContent = '🔊';
-                button.title = '영어 읽기';
-                button.onclick = () => speakText(code.textContent, button);
+                button.setAttribute('aria-label', '영어 텍스트 읽기');
+                button.setAttribute('type', 'button');
+                
+                // 터치 및 클릭 이벤트 추가
+                const handlers = createTouchHandler(code.textContent, button);
+                
+                if (isMobile) {
+                  button.addEventListener('touchstart', handlers.touchstart, { passive: false });
+                  button.addEventListener('touchend', handlers.touchend, { passive: false });
+                } else {
+                  button.addEventListener('click', handlers.click);
+                }
 
                 pre.style.position = 'relative';
-                pre.insertBefore(button, pre.firstChild);
+                pre.appendChild(button); // insertBefore 대신 appendChild 사용
               });
             }, 100);
           });
@@ -322,10 +549,49 @@
           hook.beforeEach(content => {
             if (isSpeaking) {
               speechSynthesis.cancel();
-              isSpeaking = false;
+              resetButton();
             }
             return content;
           });
+
+          // 페이지 숨김시 TTS 중지 (모바일 브라우저 대응)
+          document.addEventListener('visibilitychange', () => {
+            if (document.hidden && isSpeaking) {
+              speechSynthesis.cancel();
+              resetButton();
+            }
+          });
+        },
+
+        // 모바일 햄버거 메뉴 개선
+        function(hook, vm) {
+          if (window.innerWidth <= 768) {
+            hook.doneEach(() => {
+              setTimeout(() => {
+                const toggle = document.querySelector('.sidebar-toggle');
+                if (toggle && !toggle.querySelector('span')) {
+                  // 기본 텍스트 제거하고 햄버거 아이콘 추가
+                  toggle.innerHTML = `
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                  `;
+                  
+                  // 클릭 이벤트로 active 클래스 토글
+                  toggle.addEventListener('click', () => {
+                    setTimeout(() => {
+                      const sidebar = document.querySelector('.sidebar');
+                      if (sidebar && sidebar.classList.contains('open')) {
+                        toggle.classList.add('active');
+                      } else {
+                        toggle.classList.remove('active');
+                      }
+                    }, 100);
+                  });
+                }
+              }, 200);
+            });
+          }
         }
       ]
     }
